@@ -5,23 +5,22 @@ using Polly;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
-IHttpClientBuilder httpClientBuilder = builder.Services.AddHttpClient<IWeatherForecastService, WeatherForecastService>(
+builder.Services.AddHttpClient<IWeatherForecastService, WeatherForecastService>(
     configureClient: static client =>
     {
         client.BaseAddress = new("https://localhost:7205");
-    });
-//httpClientBuilder.AddStandardResilienceHandler();
-httpClientBuilder.AddResilienceHandler("retry", builder =>
-{
-    // Refer to https://www.pollydocs.org/strategies/retry.html#defaults for retry defaults
-    builder.AddRetry(new HttpRetryStrategyOptions
+    })
+    .AddResilienceHandler("RetryWeatherForecastService", configure =>
     {
-        MaxRetryAttempts = 4,
-        Delay = TimeSpan.FromSeconds(2),
-        BackoffType = DelayBackoffType.Exponential
+        // Refer to https://www.pollydocs.org/strategies/retry.html#defaults for retry defaults
+        configure.AddRetry(new HttpRetryStrategyOptions
+        {
+            MaxRetryAttempts = 4,
+            Delay = TimeSpan.FromSeconds(2),
+            BackoffType = DelayBackoffType.Exponential
+        });
+        configure.AddTimeout(TimeSpan.FromSeconds(5));
     });
-    builder.AddTimeout(TimeSpan.FromSeconds(5));
-});
 
 var app = builder.Build();
 
